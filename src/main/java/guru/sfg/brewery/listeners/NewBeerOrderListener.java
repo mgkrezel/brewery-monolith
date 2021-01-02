@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import javax.transaction.Transactional;
 import java.util.List;
@@ -29,7 +30,7 @@ public class NewBeerOrderListener {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener
     @Transactional
     public synchronized void listen(NewBeerOrderEvent event){ //needed sychronized to prevent errors
         log.debug("Allocating Order: " + event.getBeerOrder().getCustomerRef());
@@ -38,16 +39,6 @@ public class NewBeerOrderListener {
         AtomicInteger totalAllocated = new AtomicInteger();
 
         BeerOrder beerOrder = beerOrderRepository.findOneById(event.getBeerOrder().getId());
-
-        if (beerOrder == null){
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            //event firing before save is complete
-            beerOrder = beerOrderRepository.findOneById(event.getBeerOrder().getId());
-        }
 
         beerOrder.getBeerOrderLines().forEach(beerOrderLine -> {
             if ((beerOrderLine.getOrderQuantity() - beerOrderLine.getQuantityAllocated()) > 0) {
